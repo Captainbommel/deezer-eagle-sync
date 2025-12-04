@@ -321,6 +321,42 @@ def update_eagle_item(eagle_id: str, deezer_id: str, tags: list[str] = None):
     if result:
         print(f"Updated Eagle ID {eagle_id} with Deezer ID {deezer_id}")
 
+def move_to_trash(eagle_ids: list[str]):
+    """Moves items to trash in Eagle."""
+    if not eagle_ids:
+        return
+
+    data = {
+        "itemIds": eagle_ids
+    }
+    result = eagle_api_request("item/moveToTrash", method="POST", data=data)
+    if result and result.get("status") == "success":
+        print(f"Moved {len(eagle_ids)} items to trash.")
+    else:
+        print(f"Failed to move items to trash: {result}")
+
+def process_removals(tracks: list[track], playlist_title: str):
+    """Removes tracks from Eagle playlist. Trashes item if it has no other tags."""
+    trash_ids = []
+    
+    for t in tracks:
+        # t.tags contains all tags for this item
+        new_tags = set(t.tags)
+        if playlist_title in new_tags:
+            new_tags.remove(playlist_title)
+        
+        if not new_tags:
+            # No tags left, trash it
+            trash_ids.append(t.eagle_id)
+        else:
+            # Has other tags, just update to remove this tag
+            print(f"Untagging {t.title} from {playlist_title}")
+            update_eagle_item(t.eagle_id, t.deezer_id, list(new_tags))
+            
+    if trash_ids:
+        print(f"Trashing {len(trash_ids)} items...")
+        move_to_trash(trash_ids)
+
 def update_eagle_from_complement(complement: list[track], playlist_title: str):
     """Updates eagle with the complement of the deezer playlist."""
     if not complement:
@@ -417,6 +453,13 @@ if __name__ == "__main__":
             complement = d_playlist.complement(e_playlist)
             print(f"Missing in Eagle: {len(complement)} tracks")
             update_eagle_from_complement(complement, d_playlist.title)
+
+            # Check for tracks to remove (In Eagle but not in Deezer)
+            to_remove = e_playlist.complement(d_playlist)
+            if to_remove:
+                print(f"Extra in Eagle: {len(to_remove)} tracks")
+                process_removals(to_remove, d_playlist.title)
+
         else:
             print(f"New playlist found: {d_playlist.title}")
             # If playlist doesn't exist in Eagle, all tracks are the complement
