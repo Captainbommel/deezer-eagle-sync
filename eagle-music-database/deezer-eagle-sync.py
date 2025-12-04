@@ -167,7 +167,7 @@ class playlist(object):
         return f"https://api.deezer.com/playlist/{self.deezer_id}"
 
     def complement(self, other):
-        return list(self.tracklist - other.tracklist)
+        return list(set(self.tracklist) - set(other.tracklist))
 
     def __str__(self) -> str:
         return f"{self.title} - {len(self.tracklist)} tracks"
@@ -362,7 +362,23 @@ if __name__ == "__main__":
         try:
             with open(CACHE_FILE, "rb") as f:
                 deezer_playlists = pickle.load(f)
-            print("Loaded playlists from cache.")
+            
+            # Validate cache schema compatibility
+            valid_cache = True
+            if deezer_playlists:
+                for pl in deezer_playlists:
+                    if pl.tracklist:
+                        sample_track = next(iter(pl.tracklist))
+                        if not hasattr(sample_track, "deezer_id"):
+                            print("Cache contains outdated data structure. Discarding.")
+                            valid_cache = False
+                        break
+            
+            if not valid_cache:
+                deezer_playlists = []
+            else:
+                print("Loaded playlists from cache.")
+
         except Exception as e:
             print(f"Failed to load cache: {e}")
             deezer_playlists = []
