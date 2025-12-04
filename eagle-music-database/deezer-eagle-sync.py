@@ -466,6 +466,24 @@ if __name__ == "__main__":
             update_eagle_from_complement(list(d_playlist.tracklist), d_playlist.title)
         
         print("-" * 40)
-    
 
+    # Check for playlists to delete (In Eagle but not in Deezer)
+    deezer_titles = set(p.title for p in deezer_playlists)
+    eagle_titles = set(eagle_map.keys())
     
+    playlists_to_delete = eagle_titles - deezer_titles
+    
+    if playlists_to_delete:
+        print("\n" + "="*40)
+        print(f"Found {len(playlists_to_delete)} playlists in Eagle that are not in Deezer.")
+        print("Deleting extra playlists...")
+        print("="*40)
+        
+        for title in playlists_to_delete:
+            print(f"Deleting playlist: {title}")
+            e_playlist = eagle_map[title]
+            # Remove this tag from all tracks in this playlist
+            process_removals(list(e_playlist.tracklist), title)
+            print("-" * 20)
+    else:
+        print("\nNo extra playlists found in Eagle.")
