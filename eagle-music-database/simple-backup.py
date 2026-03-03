@@ -1,7 +1,9 @@
 import json
-import requests
 import os
 from time import sleep
+
+import requests
+
 
 def get_user_playlists(user_id):
     """Returns a list of all of the Deezer users playlists."""
@@ -30,6 +32,7 @@ def get_user_playlists(user_id):
             break
             
     return playlists
+
 
 def get_playlist_tracks(tracklist_url):
     """Fetches all tracks from a given playlist URL."""
@@ -68,6 +71,7 @@ def get_playlist_tracks(tracklist_url):
             
     return tracks
 
+
 def backup_playlists(deezer_user_id=None):
     print(f"Fetching playlists for user ID: {deezer_user_id}")
     playlists = get_user_playlists(deezer_user_id)
@@ -95,6 +99,7 @@ def backup_playlists(deezer_user_id=None):
         json.dump(all_data, f, indent=4, ensure_ascii=False)
         
     print(f"Backup complete. Saved {len(all_data)} playlists to {output_file}")
+
 
 if __name__ == "__main__":
     backup_playlists("DEEZER_USER_ID_HERE")

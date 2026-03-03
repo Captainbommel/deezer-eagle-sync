@@ -1,11 +1,11 @@
-from time import sleep
-import requests
 import json
-import pickle
-from dotenv import load_dotenv
 import os
+import pickle
+from time import sleep
 
-# Load the environment variables
+import requests
+from dotenv import load_dotenv
+
 load_dotenv()
 PROJECT_PATH = os.getenv("PROJECT_PATH")
 DEEZER_USER_ID = os.getenv("DEEZER_USER_ID")
@@ -24,6 +24,7 @@ def deezer_api_request(endpoint: str, id: str):
     except json.JSONDecodeError:
         print(f"Error decoding JSON from {url}")
         return {}
+
 
 def get_deezer_paginated(url: str):
     """Generator that yields items from a paginated Deezer API endpoint."""
@@ -46,6 +47,7 @@ def get_deezer_paginated(url: str):
         if url:
             sleep(0.1)
 
+
 def eagle_api_request(endpoint: str, method="GET", data=None):
     """Centralized handler for Eagle API requests."""
     url = f"{EAGLE_API_BASE}/{endpoint}"
@@ -65,9 +67,10 @@ def eagle_api_request(endpoint: str, method="GET", data=None):
         print(f"Eagle API Exception ({endpoint}): {e}")
         return None
 
+
 def remove_non_file_chars(name: str) -> str:
     """Replaces characters which can't be in filenames with similar ones."""
-    find = ['\"', ":", "/", "???", "?", "<", ">", "*", "|"]
+    find = ["\"" , ":", "/", "???", "?", "<", ">", "*", "|"]
     replace = ["⧵", "׃", "／", "unknown artist", "", "ᐸ", "ᐳ", "⚹", "⎟"]
 
     name = name.strip()
@@ -75,13 +78,16 @@ def remove_non_file_chars(name: str) -> str:
         name = name.replace(f, r)
     return name
 
+
 def minusminus(string: str) -> str:
     """Replaces ' - ' with ' ‒ '."""
     return string.strip().replace(" - ", " ‒ ")
 
+
 def get_filename(title: str, artist: str) -> str:
     """Returns the eagle filename of a track."""
     return remove_non_file_chars(f"{minusminus(title)} - {minusminus(artist)}")
+
 
 def split_name(name):
     """Splits the name of a track into title and artist"""
@@ -223,6 +229,7 @@ def deezer_user_playlists(user_id: str):
         )
     return playlists
 
+
 def eagle_playlist(limit=1000000):
     """Returns a list of playlists based on the tags in eagle"""
     data = eagle_api_request("item/list", data={"limit": limit})
@@ -260,17 +267,20 @@ def eagle_playlist(limit=1000000):
     print(f"{len(failed)} items failed to parse from Eagle") if len(failed) > 0 else None
     return list(playlists.values())
 
+
 def get_eagle_id_by_name(name: str) -> str | None:
     data = eagle_api_request("item/list", data={"limit": 1, "name": name})
     if data and data["data"] and data["data"][0]["name"] == name:
         return data["data"][0]["id"]
     return None
 
+
 def get_eagle_item_tags(eagle_id: str) -> list[str]:
     data = eagle_api_request("item/info", data={"id": eagle_id})
     if data:
         return data.get("data", {}).get("tags", [])
     return []
+
 
 def add_to_eagle(track: track, tags: list[str]):
     """Adds a track to the Eagle music database."""
@@ -308,6 +318,7 @@ def add_to_eagle(track: track, tags: list[str]):
     if result:
         print(f"Added {filename} to Eagle.")
 
+
 def update_eagle_item(eagle_id: str, deezer_id: str, tags: list[str] = None):
     data = {
         "id": eagle_id,
@@ -320,6 +331,7 @@ def update_eagle_item(eagle_id: str, deezer_id: str, tags: list[str] = None):
     result = eagle_api_request("item/update", method="POST", data=data)
     if result:
         print(f"Updated Eagle ID {eagle_id} with Deezer ID {deezer_id}")
+
 
 def move_to_trash(eagle_ids: list[str]):
     """Moves items to trash in Eagle."""
@@ -334,6 +346,7 @@ def move_to_trash(eagle_ids: list[str]):
         print(f"Moved {len(eagle_ids)} items to trash.")
     else:
         print(f"Failed to move items to trash: {result}")
+
 
 def process_removals(tracks: list[track], playlist_title: str):
     """Removes tracks from Eagle playlist. Trashes item if it has no other tags."""
@@ -357,6 +370,7 @@ def process_removals(tracks: list[track], playlist_title: str):
         print(f"Trashing {len(trash_ids)} items...")
         move_to_trash(trash_ids)
 
+
 def update_eagle_from_complement(complement: list[track], playlist_title: str):
     """Updates eagle with the complement of the deezer playlist."""
     if not complement:
@@ -377,11 +391,8 @@ def update_eagle_from_complement(complement: list[track], playlist_title: str):
             print(f"Adding new track: {filename}")
             add_to_eagle(track, [playlist_title])
 
-# -----------------------------------------------------------------------------
-# Main Execution
-# -----------------------------------------------------------------------------
 
-if __name__ == "__main__":
+def main():
     if not DEEZER_USER_ID:
         print("Error: DEEZER_USER_ID not found in environment variables.")
         exit(1)
@@ -487,3 +498,7 @@ if __name__ == "__main__":
             print("-" * 20)
     else:
         print("\nNo extra playlists found in Eagle.")
+
+
+if __name__ == "__main__":
+    main()

@@ -1,14 +1,12 @@
 import datetime
 import json
-import requests
 import os
 import re
+
+import requests
 from PIL import Image
 from dotenv import load_dotenv
 
-
-
-# Load the environment variables
 load_dotenv()
 PROJECT_PATH = os.getenv("PROJECT_PATH")
 VAULT_PATH = os.getenv("VAULT_PATH")
@@ -38,7 +36,7 @@ def get_eagle_id(name):
         return None
 
     if data["data"][0]["name"] == name:
-        return data["data"][i]["id"]
+        return data["data"][0]["id"]
 
     return None
 
@@ -118,66 +116,65 @@ def get_date_taken_from_exif(eagle_id):
     return datetime.datetime.strptime(exif[36867], "%Y:%m:%d %H:%M:%S")
 
 
-########
-# Main #
-########
+def main():
+    ids, names = get_eagle_ids_and_names()
 
-# get all eagle ids and names
-ids, names = get_eagle_ids_and_names()
+    pattern = [
+        r"VID-(\d{8})-WA\d{4}",  # whatsapp video
+        r"IMG-(\d{8})-WA\d{4}",  # whatsapp image
+        r"PXL-(\d{8})-\d{9}",  # pixel image
+        r"PXL_(\d{8})_\d{9}",  # pixel image
+        r"(\d{8})_\d{9}_iOS",  # iOS image
+        r"VID-(\d{8})-\d{6}",  # unknown source video
+        r"VID_(\d{8})_\d{6}",  # unknown source video
+        r"Screenshot_(\d{8})-\d{6}",  # screenshot
+        r"Screenshot_(\d{4})-(\d{2})-(\d{2})-\d{2}-\d{2}-\d{2}",  # screenshot
+        r"\d{3}-DSC\d{5}-(\d{8})-\d{4}-\d{2}-\d{2}-",  # unknown source image
+        r"IMG_(\d{8})_\d{6}",  # unknown source image
+        r"(\d{8})\d{8}-",  # switch screenshot
+        r"(\d{13})-.{8}(-)",
+    ]
 
-# find new patterns
-pattern = [
-    r"VID-(\d{8})-WA\d{4}",  # whatsapp video
-    r"IMG-(\d{8})-WA\d{4}",  # whatsapp image
-    r"PXL-(\d{8})-\d{9}",  # pixel image
-    r"PXL_(\d{8})_\d{9}",  # pixel image
-    r"(\d{8})_\d{9}_iOS",  # iOS image
-    r"VID-(\d{8})-\d{6}",  # unknown source video
-    r"VID_(\d{8})_\d{6}",  # unknown source video
-    r"Screenshot_(\d{8})-\d{6}",  # screenshot
-    r"Screenshot_(\d{4})-(\d{2})-(\d{2})-\d{2}-\d{2}-\d{2}",  # screenshot
-    r"\d{3}-DSC\d{5}-(\d{8})-\d{4}-\d{2}-\d{2}-",  # unknown source image
-    r"IMG_(\d{8})_\d{6}",  # unknown source image
-    r"(\d{8})\d{8}-",  # switch screenshot
-    r"(\d{13})-.{8}(-)",
-]
+    skip = []
 
-skip = []
+    start = 0
+    missing = []
+    for i in range(start, len(names)):
+        if names[i] in skip:
+            continue
+        print(names[i], i)
 
-start = 0
-missing = []
-for i in range(start, len(names)):
-    if names[i] in skip:
-        continue
-    print(names[i], i)
+        found = False
+        for regex_pattern in pattern:
+            match = re.search(regex_pattern, names[i])
+            if match:
+                if re.compile(regex_pattern).groups == 3:
+                    date = datetime.datetime.strptime(
+                        match.group(1) + match.group(2) + match.group(3), "%Y%m%d"
+                    )
+                    update_btime(ids[i], date)
 
-    found = False
-    for regex_pattern in pattern:
-        match = re.search(regex_pattern, names[i])
-        if match:
-            if re.compile(regex_pattern).groups == 3:
-                date = datetime.datetime.strptime(
-                    match.group(1) + match.group(2) + match.group(3), "%Y%m%d"
-                )
+                elif re.compile(regex_pattern).groups == 2:
+                    date = datetime.datetime.fromtimestamp(int(match.groups(1)[0]) / 1000)
+                    update_btime(ids[i], date)
+
+                else:
+                    date = datetime.datetime.strptime(match.group(1), "%Y%m%d")
+                    update_btime(ids[i], date)
+
+                found = True
+                break
+
+        if found is False:
+            date = get_date_taken_from_exif(ids[i])
+            if date is not None:
                 update_btime(ids[i], date)
-
-            elif re.compile(regex_pattern).groups == 2:
-                date = datetime.datetime.fromtimestamp(int(match.groups(1)[0]) / 1000)
-                update_btime(ids[i], date)
-
             else:
-                date = datetime.datetime.strptime(match.group(1), "%Y%m%d")
-                update_btime(ids[i], date)
+                missing.append(names[i])
+                print(f"the date for: '{names[i]}' could not be found")
 
-            found = True
-            break
+    print(missing)
 
-    if found is False:
-        date = get_date_taken_from_exif(ids[i])
-        if date is not None:
-            update_btime(ids[i], date)
-        else:
-            missing.append(names[i])
-            print(f"the date for: '{names[i]}' could not be found")
 
-print(missing)
+if __name__ == "__main__":
+    main()
