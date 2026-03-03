@@ -1,4 +1,4 @@
-# Music and Image Tagging
+# Deezer Eagle Sync
 
 This project contains scripts for managing and synchronizing [Deezer](https://www.deezer.com/de/) playlists and [Eagle](https://eagle.cool/), as well as tools for correcting date information.
 
