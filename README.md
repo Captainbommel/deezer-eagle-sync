@@ -20,7 +20,3 @@ It is really useful to see which tracks are in multiple playlists, and I have gr
 
 1. Set up .env with required variables (see scripts for details).
 2. Run scripts.
-
-## Current Status
-
-- I have found a way to get music files directly so I probably wont update this in the future.
